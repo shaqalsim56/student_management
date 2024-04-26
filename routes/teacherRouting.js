@@ -1,21 +1,20 @@
 import express from 'express';
 import {
     //TEACHERS
-    createTeacher,
+    addTeacher,
     getTeachers,
     getTeacher,
-    updateTeacher,
-    deleteTeacher,
+    editTeacher,
 } from '../controller/database_controller.js';
 
 export const teacherRouter = express.Router();
-
+ 
 teacherRouter.get('/all-teachers', getTeachers);
 
-teacherRouter.get('/teacher/:id', getTeacher);
+teacherRouter.get('/teacher/:id', getTeacher); 
 
-teacherRouter.post('/new-teacher', createTeacher);
+teacherRouter.post('/new-teacher', addTeacher);
 
-teacherRouter.patch('/update-teacher/:id', updateTeacher);
+teacherRouter.patch('/update-teacher/:id', editTeacher);
 
-teacherRouter.delete('/delete-teacher/:id', deleteTeacher);
+// teacherRouter.delete('/delete-teacher/:id', deleteTeacher);

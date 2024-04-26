@@ -72,7 +72,7 @@ export async function getCourse(request, response) {
     response.status(200).json({
         status: 'success',
         results: 1,
-        data: { course }
+        course
     });
 }
 
@@ -86,7 +86,7 @@ export async function getTeachers(request, response) {
         for (let key in teacher) {
             // Iterate over the teacher object and update the "courses" property 1-3 with the appropriate course name
             if (key.split('_').includes('course') && teacher[key]) {
-                teacher[key] = `${(await getCourseName(teacher[key])).course_name}  (${(await getCourseName(teacher[key])).abbreviation})`;
+                teacher[key] = `${(await getCourseName(teacher[key])).course_name} (${(await getCourseName(teacher[key])).abbreviation})`;
             }
         }
     }
@@ -94,7 +94,7 @@ export async function getTeachers(request, response) {
     response.status(200).json({
         status: 'success',
         results: teachers.length,
-        data: { teachers }
+        teachers: teachers
     });
 }
 
@@ -107,14 +107,14 @@ export async function getTeacher(request, response) {
     // Iterate over the teacher object and update the "courses" property 1-3 with the appropriate course name
     for (let key in teacher) {
         if (key.split('_').includes('course') && teacher[key]) {
-            teacher[key] = `${(await getCourseName(teacher[key])).course_name}  (${(await getCourseName(teacher[key])).abbreviation})`;
+            teacher[key] = `${(await getCourseName(teacher[key])).course_name} (${(await getCourseName(teacher[key])).abbreviation})`;
         }
     }
 
     response.status(200).json({
         status: 'success',
         results: 1,
-        data: { teacher }
+        teacher: teacher
     });
 }
 
@@ -138,7 +138,7 @@ export async function getStudent(request, response) {
     response.status(200).json({
         status: 'success',
         results: 1,
-        data: { student }
+        student: student
     });
 }
 
@@ -154,17 +154,48 @@ export async function getStudents(request, response) {
         // Iterate over the student object and update the "courses" property 1-3 with the appropriate course name
         for (let key in student) {
             if (key.split('_').includes('course')) {
-                student[key] = `${(await getCourseName(student[key])).course_name}  (${(await getCourseName(student[key])).abbreviation})`;
+                student[key] = `${(await getCourseName(student[key])).course_name} (${(await getCourseName(student[key])).abbreviation})`;
             }
-        }
+        } 
     }
     
     response.status(200).json({
         status: 'success',
         results: students.length,
-        data: { students }
+        students: students 
     });
 }
+
+export async function getPayments(request, response) {
+    const sqlQuery = `SELECT payments.id AS payment_id, payment_date, amount, student_id, first_nm, 
+    last_nm FROM payments INNER JOIN students ON students.id = student_id`;
+
+    const [payments] = await pool.query(sqlQuery);
+
+    response.status(200).json({
+        status: 'success',
+        results: 1,
+        payments
+    });
+}
+
+export async function getPayment(request, response) {
+    const id = request.params.id;
+
+    const sqlQuery = `SELECT payments.id AS payment_id, payment_date, amount, student_id, first_nm, 
+    last_nm FROM payments INNER JOIN students ON students.id = student_id
+    WHERE students.id = ${id}`;
+
+    const [[payment]] = await pool.query(sqlQuery);
+
+    response.status(200).json({
+        status: 'success',
+        results: 1,
+        payment
+    });
+}
+
+
 
 // Add a payment to the payments table
 export async function addPayment(request, response) {
@@ -186,7 +217,7 @@ export async function addPayment(request, response) {
 
     response.status(200).json({
         status: 'success',
-        results: result.info
+        result
     });
 }
 
@@ -208,7 +239,7 @@ export async function addStudent(request, response) {
     const [results] = await pool.query(sqlQuery);
     response.status(200).json({
         status: 'success',
-        results: results.info
+        results: results
     });
 }
 
@@ -233,26 +264,27 @@ export async function addTeacher(request, response) {
 
     response.status(200).json({
         status: 'success',
-        results: result.info
+        results: result
     });
 }
 
 // Add a course
 export async function addCourse(request, response) {
-    const {name, exam_id} = request.body;
+    const {course_name, exam} = request.body;
 
-    const [result] = await pool.query('INSERT INTO courses (course_name, exam) VALUES (?, ?)', [name, exam_id]);
+    const [result] = await pool.query('INSERT INTO courses (course_name, exam) VALUES (?, ?)',
+     [course_name, exam]);
     response.status(200).json({
         status: 'success',
-        results: result.info
+        results: result
     });
 }
 
 // Edit teacher
-export async function editTeacher(teacher) {
-    const {id, first_nm, last_nm, email, course_one, course_two, course_three} = request.body;
-    const student = {
-        id,
+export async function editTeacher(request, response) {
+    const {first_nm, last_nm, email, course_one, course_two, course_three} = request.body;
+    const teacher = {
+        id: request.params.id,
         first_nm,
         last_nm,
         email,
@@ -273,6 +305,6 @@ export async function editTeacher(teacher) {
     
     response.status(200).json({
         status: 'success',
-        results: result[0].info
+        results: result
     });;
 }

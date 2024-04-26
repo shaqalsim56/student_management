@@ -1,11 +1,9 @@
 import express from 'express';
 import {
     //COURSES
-    createCourse,
+    addCourse,
     getCourses,
     getCourse,
-    updateCourse,
-    deleteCourse,
 
 } from '../controller/database_controller.js';
 
@@ -15,8 +13,8 @@ courseRouter.get('/all-courses', getCourses);
 
 courseRouter.get('/course/:id', getCourse);
 
-courseRouter.post('/new-course', createCourse);
+courseRouter.post('/new-course', addCourse);
 
-courseRouter.patch('/update-course/:id', updateCourse);
+// courseRouter.patch('/update-course/:id', updateCourse);
 
-courseRouter.delete('/delete-course/:id', deleteCourse);
+// courseRouter.delete('/delete-course/:id', deleteCourse);

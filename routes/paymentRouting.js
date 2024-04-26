@@ -1,7 +1,7 @@
 import express from 'express';
 import {
     //PAYMENTS
-    createPayment,
+    addPayment,
     getPayments,
     getPayment
 
@@ -13,5 +13,5 @@ paymentRouter.get('/all-payments', getPayments);
 
 paymentRouter.get('/payment/:id', getPayment);
 
-paymentRouter.post('/new-payment', createPayment);
+paymentRouter.post('/new-payment', addPayment);
 
