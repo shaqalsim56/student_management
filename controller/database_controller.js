@@ -25,7 +25,7 @@ import { pool } from "../data/database_connection.js";
 // };
 
 // Calculates a student's balance and update their record
-async function getBalance(id) {
+export async function getBalance(id) {
     const costQuery = `SELECT SUM(exams.price) AS totalCost FROM students INNER JOIN courses ON courses.id = course_one 
     OR courses.id = course_two OR courses.id = course_three INNER JOIN exams ON exams.id = exam 
     WHERE students.id = ${id}`;
@@ -43,7 +43,7 @@ async function getBalance(id) {
 }
 
 // Get the name of course
-async function getCourseName(course_id) {
+export async function getCourseName(course_id) {
     const sqlQuery = `SELECT course_name, abbreviation FROM courses INNER JOIN exams ON exams.id = exam
         WHERE courses.id = ${course_id}`;
     const [[course]] = await pool.query(sqlQuery);
@@ -51,8 +51,57 @@ async function getCourseName(course_id) {
     return course;
 }
 
+// Get all courses
+export async function getCourses() {
+    const sqlQuery = `SELECT courses.id, course_name, abbreviation, price FROM courses INNER JOIN exams on exams.id = exam
+    ORDER BY id`
+    const [courses] = await pool.query(sqlQuery);
+    return courses;
+}
+
+// Get a single course
+export async function getCourse(id) {
+    const sqlQuery = `SELECT courses.id, course_name, abbreviation, price FROM courses INNER JOIN exams on exams.id = exam
+    WHERE courses.id = ${id}`;
+    const [[courses]] = await pool.query(sqlQuery);
+    return courses;
+}
+
+// Get all teachers
+export async function getTeachers() {
+    const sqlQuery = `SELECT * FROM teachers ORDER BY id ASC`;
+    const [teachers] = await pool.query(sqlQuery);
+
+    // Iterate over the returned records
+    for (let teacher of teachers) {
+        for (let key in teacher) {
+            // Iterate over the teacher object and update the "courses" property 1-3 with the appropriate course name
+            if (key.split('_').includes('course') && teacher[key]) {
+                teacher[key] = `${(await getCourseName(teacher[key])).course_name}  (${(await getCourseName(teacher[key])).abbreviation})`;
+            }
+        }
+    }
+
+    return teachers;
+}
+
+// Get a single teachers
+export async function getTeacher(id) {
+    const sqlQuery = `SELECT * FROM teachers WHERE id = ${id}`;
+    const [[teacher]] = await pool.query(sqlQuery);
+
+    // Iterate over the teacher object and update the "courses" property 1-3 with the appropriate course name
+    for (let key in teacher) {
+        if (key.split('_').includes('course') && teacher[key]) {
+            teacher[key] = `${(await getCourseName(teacher[key])).course_name}  (${(await getCourseName(teacher[key])).abbreviation})`;
+        }
+    }
+
+    return teacher;
+}
+
 // Get a single student
-async function getStudent(id) {
+export async function getStudent(id) {
     await getBalance(id) // Calculate the student's balance.
 
     const sqlQuery = `SELECT * FROM students WHERE id = ${id}`;
@@ -71,9 +120,8 @@ async function getStudent(id) {
 }
 
 // Get all students
-async function getStudents() {
+export async function getStudents() {
     const sqlQuery = `SELECT * FROM students ORDER BY id ASC`;
-
     const [students] = await pool.query(sqlQuery);
 
     // Iterate over the returned records
@@ -92,7 +140,8 @@ async function getStudents() {
 }
 
 // Add a payment to the payments table
-async function addPayment(student_id, amount) {
+export async function addPayment(student_id, amount) {
+    // This function is used to convert todays date to the format acceptable by MYSQL.
     const formatDate =  datetime => {
         const day = Intl.NumberFormat('en-US', {minimumIntegerDigits: 2}).format(datetime.getDate());
         const month = Intl.NumberFormat('en-US', {minimumIntegerDigits: 2}).format(datetime.getMonth() + 1);
@@ -111,18 +160,44 @@ async function addPayment(student_id, amount) {
 }
 
 // Add a student
-async function addStudent(student) {
+export async function addStudent(student) {
     const sqlQuery = ` INSERT INTO students (first_nm, last_nm, email, course_one, course_two, course_three) 
-        VALUES (student.first_nm, student.last_nm, student.email, student.course_one, student.course_two, student.course_three)`
+        VALUES ('${student.first_nm}', '${student.last_nm}', '${student.email}', '${student.course_one}', 
+        ${student.course_two}, ${student.course_three})`;
     
     const [results] = await pool.query(sqlQuery);
     return results.insertId;
 }
 
+// Add a teacher 
+export async function addTeacher(teacher) {
+    const sqlQuery = (teacher.course_two) ? `INSERT INTO teachers (first_nm, last_nm, email, course_one, course_two) VALUES 
+    ('${teacher.first_nm}', '${teacher.last_nm}', '${teacher.email}', '${teacher.course_one}', '${teacher.course_two}')` 
+        : 
+    `INSERT INTO teachers (first_nm, last_nm, email, course_one) VALUES 
+    ('${teacher.first_nm}', '${teacher.last_nm}', '${teacher.email}', '${teacher.course_one}')`;
 
-// console.log((await getCourseName(1)).abbreviation);
-// console.log(await addPayment(4, student.6000));
-// console.log(await getStudent(4));
-// console.log(await getStudents());
+    const [result] = await pool.query(sqlQuery);
+    return result.insertId;
+}
 
+// Add a course
+export async function addCourse(name, exam_id) {
+    const [result] = await pool.query('INSERT INTO courses (course_name, exam) VALUES (?, ?)', [name, exam_id]);
+    return result.insertId;
+}
 
+// Edit teacher
+export async function editTeacher(teacher) {
+    let result;
+    if (teacher.course_two) {
+        [result] = await pool.query (`UPDATE teachers SET first_nm = ?, last_nm = ?, email = ?, course_one = ?, course_two = ? 
+        WHERE id = ?`, [teacher.first_nm, teacher.last_nm, teacher.email, teacher.course_one, teacher.course_two, teacher.id]);
+    }
+    else {
+        [result] = await pool.query (`UPDATE teachers SET first_nm = ?, last_nm = ?, email = ?, course_one = ?, course_two = ?
+         WHERE id = ?`, [teacher.first_nm, teacher.last_nm, teacher.email, teacher.course_one, null, teacher.id]);
+    }
+    
+    return [result][0].info;
+}
