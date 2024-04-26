@@ -12,7 +12,7 @@ export const getStudents = async(request, response, next)=>{
         status: 'success',
         results: students.length,
         data: {students}
-    })
+    });
 }
 
 //Get Single Student
