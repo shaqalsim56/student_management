@@ -52,23 +52,32 @@ export async function getCourseName(course_id) {
 }
 
 // Get all courses
-export async function getCourses() {
+export async function getCourses(request, response) {
     const sqlQuery = `SELECT courses.id, course_name, abbreviation, price FROM courses INNER JOIN exams on exams.id = exam
     ORDER BY id`
     const [courses] = await pool.query(sqlQuery);
-    return courses;
+    response.status(200).json({
+        status: 'success',
+        results: courses.length,
+        data: { courses }
+    });
 }
 
 // Get a single course
-export async function getCourse(id) {
+export async function getCourse(request, response) {
+    const id = request.params.id;
     const sqlQuery = `SELECT courses.id, course_name, abbreviation, price FROM courses INNER JOIN exams on exams.id = exam
     WHERE courses.id = ${id}`;
-    const [[courses]] = await pool.query(sqlQuery);
-    return courses;
+    const [[course]] = await pool.query(sqlQuery);
+    response.status(200).json({
+        status: 'success',
+        results: 1,
+        data: { course }
+    });
 }
 
 // Get all teachers
-export async function getTeachers() {
+export async function getTeachers(request, response) {
     const sqlQuery = `SELECT * FROM teachers ORDER BY id ASC`;
     const [teachers] = await pool.query(sqlQuery);
 
@@ -82,11 +91,16 @@ export async function getTeachers() {
         }
     }
 
-    return teachers;
+    response.status(200).json({
+        status: 'success',
+        results: teachers.length,
+        data: { teachers }
+    });
 }
 
 // Get a single teachers
-export async function getTeacher(id) {
+export async function getTeacher(request, response) {
+    const id = request.params.id;
     const sqlQuery = `SELECT * FROM teachers WHERE id = ${id}`;
     const [[teacher]] = await pool.query(sqlQuery);
 
@@ -97,11 +111,16 @@ export async function getTeacher(id) {
         }
     }
 
-    return teacher;
+    response.status(200).json({
+        status: 'success',
+        results: 1,
+        data: { teacher }
+    });
 }
 
 // Get a single student
-export async function getStudent(id) {
+export async function getStudent(request, response) {
+    const id = request.params.id;
     await getBalance(id) // Calculate the student's balance.
 
     const sqlQuery = `SELECT * FROM students WHERE id = ${id}`;
@@ -116,11 +135,15 @@ export async function getStudent(id) {
         }
     }
 
-    return student;
+    response.status(200).json({
+        status: 'success',
+        results: 1,
+        data: { student }
+    });
 }
 
 // Get all students
-export async function getStudents() {
+export async function getStudents(request, response) {
     const sqlQuery = `SELECT * FROM students ORDER BY id ASC`;
     const [students] = await pool.query(sqlQuery);
 
@@ -136,11 +159,16 @@ export async function getStudents() {
         }
     }
     
-    return students;
+    response.status(200).json({
+        status: 'success',
+        results: students.length,
+        data: { students }
+    });
 }
 
 // Add a payment to the payments table
-export async function addPayment(student_id, amount) {
+export async function addPayment(request, response) {
+    const {student_id, amount} = request.body;
     // This function is used to convert todays date to the format acceptable by MYSQL.
     const formatDate =  datetime => {
         const day = Intl.NumberFormat('en-US', {minimumIntegerDigits: 2}).format(datetime.getDate());
@@ -156,21 +184,45 @@ export async function addPayment(student_id, amount) {
     const [result] = await pool.query(sqlQuery);
     await getBalance(student_id); //Update the students balance.
 
-    return result.affectedRows;
+    response.status(200).json({
+        status: 'success',
+        results: result.info
+    });
 }
 
 // Add a student
-export async function addStudent(student) {
+export async function addStudent(request, response) {
+    const {first_nm, last_nm, email, course_one, course_two, course_three} = request.body;
+    const student = {
+        first_nm,
+        last_nm,
+        email,
+        course_one,
+        course_two,
+        course_three
+    }
     const sqlQuery = ` INSERT INTO students (first_nm, last_nm, email, course_one, course_two, course_three) 
         VALUES ('${student.first_nm}', '${student.last_nm}', '${student.email}', '${student.course_one}', 
         ${student.course_two}, ${student.course_three})`;
     
     const [results] = await pool.query(sqlQuery);
-    return results.insertId;
+    response.status(200).json({
+        status: 'success',
+        results: results.info
+    });
 }
 
 // Add a teacher 
-export async function addTeacher(teacher) {
+export async function addTeacher(request, response) {
+    const {first_nm, last_nm, email, course_one, course_two} = request.body;
+    const teacher = {
+        first_nm,
+        last_nm,
+        email,
+        course_one,
+        course_two
+    }
+
     const sqlQuery = (teacher.course_two) ? `INSERT INTO teachers (first_nm, last_nm, email, course_one, course_two) VALUES 
     ('${teacher.first_nm}', '${teacher.last_nm}', '${teacher.email}', '${teacher.course_one}', '${teacher.course_two}')` 
         : 
@@ -178,17 +230,37 @@ export async function addTeacher(teacher) {
     ('${teacher.first_nm}', '${teacher.last_nm}', '${teacher.email}', '${teacher.course_one}')`;
 
     const [result] = await pool.query(sqlQuery);
-    return result.insertId;
+
+    response.status(200).json({
+        status: 'success',
+        results: result.info
+    });
 }
 
 // Add a course
-export async function addCourse(name, exam_id) {
+export async function addCourse(request, response) {
+    const {name, exam_id} = request.body;
+
     const [result] = await pool.query('INSERT INTO courses (course_name, exam) VALUES (?, ?)', [name, exam_id]);
-    return result.insertId;
+    response.status(200).json({
+        status: 'success',
+        results: result.info
+    });
 }
 
 // Edit teacher
 export async function editTeacher(teacher) {
+    const {id, first_nm, last_nm, email, course_one, course_two, course_three} = request.body;
+    const student = {
+        id,
+        first_nm,
+        last_nm,
+        email,
+        course_one,
+        course_two,
+        course_three
+    }
+
     let result;
     if (teacher.course_two) {
         [result] = await pool.query (`UPDATE teachers SET first_nm = ?, last_nm = ?, email = ?, course_one = ?, course_two = ? 
@@ -199,5 +271,8 @@ export async function editTeacher(teacher) {
          WHERE id = ?`, [teacher.first_nm, teacher.last_nm, teacher.email, teacher.course_one, null, teacher.id]);
     }
     
-    return [result][0].info;
+    response.status(200).json({
+        status: 'success',
+        results: result[0].info
+    });;
 }
