@@ -2,350 +2,127 @@ import { pool } from "../data/database_connection.js";
 
 // <--------------------DATABASE QUERIES FOR STUDENT TABLE-------------------->//
 
-//Get All Students
-export const getStudents = async(request, response, next)=>{
-    let sqlQuery = `SELECT * FROM students`;
-
-    const [students] = await pool.query(sqlQuery)
-
-    response.status(200).json({
-        status: 'success',
-        results: students.length,
-        data: {students}
-    })
-}
-
 //Get Single Student
-export const getStudent = async(request, response, next)=>{
-    const id = request.params.id;
-    let sqlQuery = `SELECT * FROM students WHERE id = ${id}`;
+// export const getStudent = async(request, response, next)=>{
+//     const id = request.params.id;
+//     let sqlQuery = `SELECT * FROM students INNER JOIN courses ON  course_one = courses.id OR course_two = courses.id OR course_three = courses.id
+// 	INNER JOIN exam_level ON exam_level.id = courses.exam_level WHERE students.id = 1;`;
 
-    const [students] = await pool.query(sqlQuery)
-    if(students.length <=0){
-        response.status(404).json({
-            status: 'error',
-            message: 'Student Record Not Found'
-        });
-    }else{
-        response.status(200).json({
-            status: 'success',
-            results: students.length,
-            data: { students: students[0] }
-        });
-    }
+//     const [students] = await pool.query(sqlQuery)
+//     if(students.length <=0){
+//         response.status(404).json({
+//             status: 'error',
+//             message: 'Student Record Not Found'
+//         });
+//     }else{
+//         response.status(200).json({
+//             status: 'success',
+//             results: students.length,
+//             data: { students: students[0] }
+//         });
+//     }
 
-};
+// };
 
-//Add New Student To Database
-export const createStudent = async(request, response, next)=>{
-    let sqlQuery = `INSERT INTO students (f_name, l_name, email, password) VALUES (?, ?, ?, ?)`;
+// Calculates a student's balance and update their record
+async function getBalance(id) {
+    const costQuery = `SELECT SUM(exams.price) AS totalCost FROM students INNER JOIN courses ON courses.id = course_one 
+    OR courses.id = course_two OR courses.id = course_three INNER JOIN exams ON exams.id = exam 
+    WHERE students.id = ${id}`;
 
-    const [student] = await pool.query(sqlQuery, [
-        request.body.f_n, 
-        request.body.l_n,
-        request.body.e_m, 
-        request.body.p_w, 
-        ])
+    const paymentQuery = `SELECT SUM(amount) AS totalPayment FROM payments WHERE student_id = ${id}`;
 
-    response.status(201).json({
-        status: 'success',
-        recordID: student.insertId,
-    });
-};
+    const [[cost]] = await pool.query(costQuery);
+    const [[payments]] = await pool.query(paymentQuery);
 
-//Update Student
-export const updateStudent = async(request, response, next)=>{
-    let sqlQuery = `UPDATE students SET f_name = ?, l_name = ?, email=?, password=? WHERE id =?)`;
+    // Update the student's record with the calculated balance.
+    const balance = cost.totalCost - payments.totalPayment;
+    await pool.query(`UPDATE students SET balance = ${balance} WHERE id = ${id}`);
 
-    const [student] = await pool.query(sqlQuery, [
-        request.body.f_n, 
-        request.body.l_n,
-        request.body.e_m, 
-        request.body.p_w, 
-        request.body.id
-        ])
-
-        if(student.affectedRows <= 0){
-            response.status(400).json({
-                status: 'error',
-                message: 'No Updates Were Made'
-            });
-        }else{
-            response.status(200).json({
-                status: 'success',
-                affectedRows: student.affectedRows
-            });
-        }
-};
-
-//Delete Student From Database
-export const deleteStudent = async(request, response, next)=>{
-    const id = request.params.id;
-    let sqlQuery = `DELETE FROM students WHERE id = ?`;
-
-    const [student] = await pool.query(sqlQuery, [id])
-
-    if(student.affectedRows <= 0){
-        response.status(400).json({
-            status: 'error',
-            message: 'Unable To Delete'
-        });
-    }else{
-        response.status(200).json({
-            status: 'success',
-            affectedRows: student.affectedRows
-        });
-    }
-};
-
-
-// <--------------------DATABASE QUERIES FOR COURSES TABLE-------------------->//
-
-//Get All Courses
-export const getCourses = async(request, response, next)=>{
-    let sqlQuery = `SELECT * FROM courses`;
-
-    const [courses] = await pool.query(sqlQuery)
-
-    response.status(200).json({
-        status: 'success',
-        results: courses.length,
-        data: {courses}
-    })
+    return balance;
 }
 
-//Get Single Course
-export const getCourse = async(request, response, next)=>{
-    const id = request.params.id;
-    let sqlQuery = `SELECT * FROM courses WHERE id = ${id}`;
+// Get the name of course
+async function getCourseName(course_id) {
+    const sqlQuery = `SELECT course_name, abbreviation FROM courses INNER JOIN exams ON exams.id = exam
+        WHERE courses.id = ${course_id}`;
+    const [[course]] = await pool.query(sqlQuery);
 
-    const [courses] = await pool.query(sqlQuery)
-    if(courses.length <=0){
-        response.status(404).json({
-            status: 'error',
-            message: 'course Record Not Found'
-        });
-    }else{
-        response.status(200).json({
-            status: 'success',
-            results: courses.length,
-            data: { courses: courses[0] }
-        });
-    }
-
-};
-
-//Add New Course To Database
-export const createCourse = async(request, response, next)=>{
-    let sqlQuery = `INSERT INTO courses (name, teacher_id, level, price) VALUES (?, ?, ?, ?)`;
-
-    const [course] = await pool.query(sqlQuery, [
-        request.body.nm, 
-        request.body.t_i,
-        request.body.lvl, 
-        request.body.prc, 
-        ])
-
-    response.status(201).json({
-        status: 'success',
-        recordID: course.insertId,
-    });
-};
-
-//Update Course
-export const updateCourse = async(request, response, next)=>{
-    let sqlQuery = `UPDATE courses SET name = ?, teacher_id=?, level=?, price = ? WHERE id =?)`;
-
-    const [course] = await pool.query(sqlQuery, [
-        request.body.n, 
-        request.body.t_i,
-        request.body.lvl, 
-        request.body.prc, 
-        request.body.id
-        ])
-
-        if(course.affectedRows <= 0){
-            response.status(400).json({
-                status: 'error',
-                message: 'No Updates Were Made'
-            });
-        }else{
-            response.status(200).json({
-                status: 'success',
-                affectedRows: course.affectedRows
-            });
-        }
-};
-
-//Delete Course From Database
-export const deleteCourse = async(request, response, next)=>{
-    const id = request.params.id;
-    let sqlQuery = `DELETE FROM courses WHERE id = ?`;
-
-    const [student] = await pool.query(sqlQuery, [id])
-
-    if(student.affectedRows <= 0){
-        response.status(400).json({
-            status: 'error',
-            message: 'Unable To Delete'
-        });
-    }else{
-        response.status(200).json({
-            status: 'success',
-            affectedRows: student.affectedRows
-        });
-    }
-};
-
-// <--------------------DATABASE QUERIES FOR TEACHERS TABLE-------------------->//
-
-//Get All teachers
-export const getTeachers = async(request, response, next)=>{
-    let sqlQuery = `SELECT * FROM teachers`;
-
-    const [teachers] = await pool.query(sqlQuery)
-
-    response.status(200).json({
-        status: 'success',
-        results: teachers.length,
-        data: {teachers}
-    })
+    return course;
 }
 
-//Get Single teacher
-export const getTeacher = async(request, response, next)=>{
-    const id = request.params.id;
-    let sqlQuery = `SELECT * FROM teachers WHERE id = ${id}`;
+// Get a single student
+async function getStudent(id) {
+    await getBalance(id) // Calculate the student's balance.
 
-    const [teachers] = await pool.query(sqlQuery)
-    if(teachers.length <=0){
-        response.status(404).json({
-            status: 'error',
-            message: 'teacher Record Not Found'
-        });
-    }else{
-        response.status(200).json({
-            status: 'success',
-            results: teachers.length,
-            data: { teachers: teachers[0] }
-        });
-    }
+    const sqlQuery = `SELECT * FROM students WHERE id = ${id}`;
 
-};
-
-//Add New teacher To Database
-export const createTeacher = async(request, response, next)=>{
-    let sqlQuery = `INSERT INTO teachers (name, teacher_id, level, price) VALUES (?, ?, ?, ?)`;
-
-    const [teacher] = await pool.query(sqlQuery, [
-        request.body.nm, 
-        request.body.t_i,
-        request.body.lvl, 
-        request.body.prc, 
-        ])
-
-    response.status(201).json({
-        status: 'success',
-        recordID: teacher.insertId,
-    });
-};
-
-//Update teacher
-export const updateTeacher = async(request, response, next)=>{
-    let sqlQuery = `UPDATE teachers SET name = ?, teacher_id=?, level=?, price = ? WHERE id =?)`;
-
-    const [teacher] = await pool.query(sqlQuery, [
-        request.body.n, 
-        request.body.t_i,
-        request.body.lvl, 
-        request.body.prc, 
-        request.body.id
-        ])
-
-        if(teacher.affectedRows <= 0){
-            response.status(400).json({
-                status: 'error',
-                message: 'No Updates Were Made'
-            });
-        }else{
-            response.status(200).json({
-                status: 'success',
-                affectedRows: teacher.affectedRows
-            });
+    const [[student]] = await pool.query(sqlQuery); // This query returns an array of objects with "replicated" values
+    // const student = _student[0]; 
+    
+    // Loop through the object and update the "courses" property 1-3 with the appropriate course name
+    for (let key in student) {
+        if (key.split('_').includes('course')) {
+            student[key] = `${(await getCourseName(student[key])).course_name} (${(await getCourseName(student[key])).abbreviation})`;
         }
-};
-
-//Delete Teacher From Database
-export const deleteTeacher = async(request, response, next)=>{
-    const id = request.params.id;
-    let sqlQuery = `DELETE FROM teachers WHERE id = ?`;
-
-    const [student] = await pool.query(sqlQuery, [id])
-
-    if(student.affectedRows <= 0){
-        response.status(400).json({
-            status: 'error',
-            message: 'Unable To Delete'
-        });
-    }else{
-        response.status(200).json({
-            status: 'success',
-            affectedRows: student.affectedRows
-        });
     }
-};
 
-// <--------------------DATABASE QUERIES FOR PAYMENTS TABLE-------------------->//
-
-//Get All Payments
-export const getPayments = async(request, response, next)=>{
-    let sqlQuery = `SELECT * FROM payments`;
-
-    const [payments] = await pool.query(sqlQuery)
-
-    response.status(200).json({
-        status: 'success',
-        results: payments.length,
-        data: {payments}
-    })
+    return student;
 }
 
-//Get Single Payment
-export const getPayment = async(request, response, next)=>{
-    const id = request.params.id;
-    let sqlQuery = `SELECT * FROM payments WHERE id = ${id}`;
+// Get all students
+async function getStudents() {
+    const sqlQuery = `SELECT * FROM students ORDER BY id ASC`;
 
-    const [payments] = await pool.query(sqlQuery)
-    if(payments.length <=0){
-        response.status(404).json({
-            status: 'error',
-            message: 'payment Record Not Found'
-        });
-    }else{
-        response.status(200).json({
-            status: 'success',
-            results: payments.length,
-            data: { payments: payments[0] }
-        });
+    const [students] = await pool.query(sqlQuery);
+
+    // Iterate over the returned records
+    for (let student of students) {
+        student.balance = await getBalance(student.id); // Calculate the student's balance
+
+        // Iterate over the student object and update the "courses" property 1-3 with the appropriate course name
+        for (let key in student) {
+            if (key.split('_').includes('course')) {
+                student[key] = `${(await getCourseName(student[key])).course_name}  (${(await getCourseName(student[key])).abbreviation})`;
+            }
+        }
+    }
+    
+    return students;
+}
+
+// Add a payment to the payments table
+async function addPayment(student_id, amount) {
+    const formatDate =  datetime => {
+        const day = Intl.NumberFormat('en-US', {minimumIntegerDigits: 2}).format(datetime.getDate());
+        const month = Intl.NumberFormat('en-US', {minimumIntegerDigits: 2}).format(datetime.getMonth() + 1);
+        const year = datetime.getFullYear();
+    
+        return `${year}-${month}-${day}`;
     }
 
-};
+    const sqlQuery = `INSERT INTO payments (student_id, payment_date, amount) VALUES
+    (${student_id}, '${formatDate(new Date())}', ${amount})`;
 
-//Add New Payment To Database
-export const createPayment = async(request, response, next)=>{
-    let sqlQuery = `INSERT INTO payments (student_id, amount_paid, date) VALUES (?, ?, ?)`;
+    const [result] = await pool.query(sqlQuery);
+    await getBalance(student_id); //Update the students balance.
 
-    const [payment] = await pool.query(sqlQuery, [
-        request.body.nm, 
-        request.body.t_i,
-        request.body.lvl, 
-        request.body.prc, 
-        ])
+    return result.affectedRows;
+}
 
-    response.status(201).json({
-        status: 'success',
-        recordID: payment.insertId,
-    });
-};
+// Add a student
+async function addStudent(student) {
+    const sqlQuery = ` INSERT INTO students (first_nm, last_nm, email, course_one, course_two, course_three) 
+        VALUES (student.first_nm, student.last_nm, student.email, student.course_one, student.course_two, student.course_three)`
+    
+    const [results] = await pool.query(sqlQuery);
+    return results.insertId;
+}
+
+
+// console.log((await getCourseName(1)).abbreviation);
+// console.log(await addPayment(4, student.6000));
+// console.log(await getStudent(4));
+// console.log(await getStudents());
 
 
