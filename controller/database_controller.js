@@ -135,11 +135,16 @@ export async function getStudent(request, response) {
         }
     }
 
-    response.status(200).json({
-        status: 'success',
-        results: 1,
-        student: student
-    });
+    if (response) {
+        response.status(200).json({
+            status: 'success',
+            results: 1,
+            student: student
+        });
+    }
+    else {
+        return student;
+    }
 }
 
 // Get all students
