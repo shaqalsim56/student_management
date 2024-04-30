@@ -1,23 +1,30 @@
 import express from 'express';
+import { Email } from '../utility/email.js';
 import {
     //STUDENTS
-    createStudent,
+    addStudent,
     getStudents,
     getStudent,
-    updateStudent,
-    deleteStudent,
-
-
 } from '../controller/database_controller.js';
 
 export const studentRouter = express.Router();
 
 studentRouter.get('/all-students', getStudents);
 
-studentRouter.get('/student/:id', getStudent);
+studentRouter.get('/student/:id', getStudent); 
 
-studentRouter.post('/new-student', createStudent);
+studentRouter.post('/new-student', addStudent);
 
-studentRouter.patch('/update-student/:id', updateStudent);
+studentRouter.get('/send-email/:id', async (request, response) => {
+    const student = await getStudent(request);
+    const email = new Email(student);
+    await email.sendMail('balanceReminder', 'BALANCE REMINDER', student);
+    
+    response.status(200).json({
+        status: 'Success',
+        ...student
+    })
+});
+// studentRouter.patch('/update-student/:id', updateStudent);
 
-studentRouter.delete('/delete-student/:id', deleteStudent);
+// studentRouter.delete('/delete-student/:id', deleteStudent);

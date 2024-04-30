@@ -1,9 +1,9 @@
 import express from 'express';
 import {
     //PAYMENTS
-    createPayment,
+    addPayment,
     getPayments,
-    getPayment
+    getPaymentHistory
 
 } from '../controller/database_controller.js';
 
@@ -11,7 +11,7 @@ export const paymentRouter = express.Router();
 
 paymentRouter.get('/all-payments', getPayments);
 
-paymentRouter.get('/payment/:id', getPayment);
+paymentRouter.get('/payment/:id', getPaymentHistory);
 
-paymentRouter.post('/new-payment', createPayment);
+paymentRouter.post('/new-payment', addPayment);
 
