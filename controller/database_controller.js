@@ -184,14 +184,14 @@ export async function getPayments(request, response) {
     });
 }
 
-export async function getPayment(request, response) {
+export async function getPaymentHistory(request, response) {
     const id = request.params.id;
 
     const sqlQuery = `SELECT payments.id AS payment_id, payment_date, amount, student_id, first_nm, 
     last_nm FROM payments INNER JOIN students ON students.id = student_id
     WHERE students.id = ${id}`;
 
-    const [[payment]] = await pool.query(sqlQuery);
+    const [payment] = await pool.query(sqlQuery);
 
     response.status(200).json({
         status: 'success',
@@ -199,8 +199,6 @@ export async function getPayment(request, response) {
         payment
     });
 }
-
-
 
 // Add a payment to the payments table
 export async function addPayment(request, response) {
