@@ -1,26 +1,6 @@
 import { pool } from "../data/database_connection.js";
 
-// <--------------------DATABASE QUERIES FOR STUDENT TABLE-------------------->//
-
-//Get Single Student
-// export const getStudent = async(request, response, next)=>{
-//     const id = request.params.id;
-//     let sqlQuery = `SELECT * FROM students INNER JOIN courses ON  course_one = courses.id OR course_two = courses.id OR course_three = courses.id
-// 	INNER JOIN exam_level ON exam_level.id = courses.exam_level WHERE students.id = 1;`;
-
-//     const [students] = await pool.query(sqlQuery)
-//     if(students.length <=0){
-//         response.status(404).json({
-//             status: 'error',
-//             message: 'Student Record Not Found'
-//         });
-//     }else{
-//         response.status(200).json({
-//             status: 'success',
-//             results: students.length,
-//             data: { students: students[0] }
-//         });
-//     }
+// <--------------------DATABASE QUERIES-------------------->//
 
 <<<<<<< HEAD
     response.status(200).json({
